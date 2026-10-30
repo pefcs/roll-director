@@ -42,7 +42,7 @@ jobs:
           import fs from "node:fs";
           const manifest = JSON.parse(fs.readFileSync("module.json", "utf8"));
           if (manifest.id !== "roll-director") throw new Error("module.json id must be roll-director");
-          if (!/^\\d+\\.\\d+\\.\\d+/.test(manifest.version)) throw new Error("Invalid module version");
+          if (!/^\d+\.\d+\.\d+/.test(manifest.version)) throw new Error("Invalid module version");
           for (const path of [...(manifest.esmodules ?? []), ...(manifest.styles ?? [])]) {
             if (!fs.existsSync(path)) throw new Error(`Manifest file not found: ${path}`);
           }
