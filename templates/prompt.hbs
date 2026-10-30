@@ -1,0 +1,30 @@
+<div class="rd-shell rd-prompt-shell {{#if isGMView}}rd-gm-prompt{{else}}rd-player-prompt{{/if}}{{#unless hasActors}}{{#unless isGMView}} rd-player-prompt-resolved{{/unless}}{{/unless}}">
+  <header class="rd-prompt-header">
+    <div class="rd-prompt-icon"><i class="fa-solid fa-dice-d20"></i></div>
+    <div class="rd-prompt-heading"><span class="rd-overline">{{#if isGMView}}ROLL SESSION · GM{{else}}ROLL REQUEST{{/if}}</span><h2>{{typeLabel}}{{#if subtypeLabel}} <span>· {{subtypeLabel}}</span>{{/if}}</h2><p>{{#if isGMView}}{{#if hasDC}}DC {{dc}} is visible to the GM only. {{else}}No DC is attached to this roll. {{/if}}{{#if automatic}}Automatic D20 interception. {{/if}}Roll any remaining actor or let players respond.{{else}}Choose Normal, Advantage, or Disadvantage for each character, then roll.{{/if}}</p></div>
+    <div class="rd-prompt-counter"><strong>{{remaining}}</strong><span>remaining</span></div>
+  </header>
+  <div class="rd-prompt-roster">
+    {{#each actors as |actor|}}
+      <article class="rd-prompt-actor" data-actor-uuid="{{actor.uuid}}">
+        <div class="rd-prompt-actor-top"><img src="{{actor.img}}" alt="{{actor.name}}"><div class="rd-prompt-actor-copy"><strong>{{actor.name}}</strong><span>{{actor.type}}</span></div><span class="rd-mode-chip {{#if actor.selectedAdvantage}}is-adv{{/if}}{{#if actor.selectedDisadvantage}}is-dis{{/if}}">{{#if actor.selectedAdvantage}}ADVANTAGE{{else if actor.selectedDisadvantage}}DISADVANTAGE{{else}}NORMAL{{/if}}</span></div>
+        <div class="rd-prompt-mode-row">
+          <button type="button" class="rd-prompt-mode rd-dis {{#if actor.selectedDisadvantage}}is-active{{/if}}" data-action="mode" data-item-id="{{actor.itemId}}" data-mode="disadvantage"><i class="fa-solid fa-arrow-down"></i><span>Disadvantage</span></button>
+          <button type="button" class="rd-prompt-mode rd-normal {{#unless actor.selectedAdvantage}}{{#unless actor.selectedDisadvantage}}is-active{{/unless}}{{/unless}}" data-action="mode" data-item-id="{{actor.itemId}}" data-mode="normal"><i class="fa-solid fa-dice-d20"></i><span>Normal</span></button>
+          <button type="button" class="rd-prompt-mode rd-adv {{#if actor.selectedAdvantage}}is-active{{/if}}" data-action="mode" data-item-id="{{actor.itemId}}" data-mode="advantage"><i class="fa-solid fa-arrow-up"></i><span>Advantage</span></button>
+        </div>
+        <button type="button" class="rd-button rd-roll-button" data-action="roll" data-item-id="{{actor.itemId}}"><i class="fa-solid fa-dice-d20"></i><span>{{#if isGMView}}Roll for actor{{else}}Roll D20{{/if}}</span></button>
+        {{#if isGMView}}<button type="button" class="rd-skip-button" data-action="skip" data-item-id="{{actor.itemId}}">Skip this actor</button>{{/if}}
+      </article>
+    {{else}}
+      <div class="rd-empty-prompt"><i class="fa-solid fa-circle-check"></i><strong>{{#if isGMView}}All actors are resolved{{else}}Roll submitted{{/if}}</strong><span>{{#if isGMView}}Waiting for the remaining participants, if any.{{else}}Waiting for the other players…{{/if}}</span></div>
+    {{/each}}
+  </div>
+  <footer class="rd-prompt-footer">
+    <div class="rd-prompt-legend"><span class="rd-legend-item"><i class="rd-legend-dot rd-dot-adv"></i> Advantage</span><span class="rd-legend-item"><i class="rd-legend-dot rd-dot-normal"></i> Normal</span><span class="rd-legend-item"><i class="rd-legend-dot rd-dot-dis"></i> Disadvantage</span></div>
+    <div class="rd-footer-actions">
+      {{#if isGMView}}<button type="button" class="rd-icon-button rd-cancel-request-button" data-action="cancel-request" title="Cancel request" aria-label="Cancel request"><i class="fa-solid fa-ban"></i></button><button type="button" class="rd-button rd-button-secondary" data-action="roll-npcs"><i class="fa-solid fa-dragon"></i><span>Roll NPCs</span></button><button type="button" class="rd-button rd-button-primary" data-action="roll-all"><i class="fa-solid fa-dice-d20"></i><span>Roll all remaining</span></button>{{/if}}
+      <button type="button" class="rd-icon-button" data-action="close" title="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  </footer>
+</div>

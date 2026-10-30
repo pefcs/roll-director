@@ -1,0 +1,36 @@
+<div class="rd-favorites-config">
+  <header class="rd-favorites-config-header">
+    <span class="rd-favorites-config-icon"><i class="fa-solid fa-star"></i></span>
+    <div><h2>Favorite Tools</h2><p>Select any tools you want pinned to the Favorites column in the Tool Check picker.</p></div>
+  </header>
+
+  <div class="rd-favorites-config-toolbar">
+    <input type="search" class="rd-favorites-search" placeholder="Search tools…" aria-label="Search tools">
+    <button type="button" class="rd-favorites-clear" data-action="clear-favorites"><i class="fa-solid fa-xmark"></i> Clear selection</button>
+  </div>
+
+  <div class="rd-favorites-categories">
+    {{#each categories as |category|}}
+      <section class="rd-favorite-setting-category">
+        <h3>{{category.name}} <small>{{category.tools.length}}</small></h3>
+        <div class="rd-favorite-setting-options">
+          {{#each category.tools as |tool|}}
+            <label class="rd-favorite-setting-option" data-tool-label="{{tool.label}}" data-tool-value="{{tool.value}}">
+              <input type="checkbox" name="favoriteTool" value="{{tool.value}}" {{#if tool.selected}}checked{{/if}}>
+              <span>{{tool.label}}</span>
+            </label>
+          {{/each}}
+        </div>
+      </section>
+    {{/each}}
+  </div>
+  <p class="rd-favorites-no-results" hidden>No matching tools found.</p>
+
+  <footer class="rd-favorites-config-footer">
+    <span data-favorites-count>{{selectedSummary}}</span>
+    <div>
+      <button type="button" class="rd-favorites-cancel" data-action="cancel-favorites">Cancel</button>
+      <button type="button" class="rd-favorites-save" data-action="save-favorites"><i class="fa-solid fa-check"></i> Save Favorites</button>
+    </div>
+  </footer>
+</div>

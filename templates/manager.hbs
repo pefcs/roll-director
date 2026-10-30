@@ -1,0 +1,110 @@
+<div class="rd-shell rd-manager-shell">
+  <header class="rd-topbar">
+    <button type="button" class="rd-brand-mark rd-brand-collapse" data-action="collapse" title="Collapse to floating dice" aria-label="Collapse Roll Director"><i class="fa-solid fa-dice-d20"></i></button>
+    <div class="rd-brand-copy">
+      <h2>Roll Director</h2>
+      <span>GM CONTROL DECK</span>
+    </div>
+    <div class="rd-topbar-meta">
+      <span class="rd-pill"><i class="fa-solid fa-shield-halved"></i> GM only</span>
+      <button type="button" class="rd-icon-button" data-action="refresh" title="Refresh actors" aria-label="Refresh actors"><i class="fa-solid fa-rotate"></i></button>
+    </div>
+  </header>
+
+  <section class="rd-tool-drawer" data-tool-drawer hidden aria-label="Choose tool">
+    <div class="rd-tool-drawer-toolbar">
+      <div class="rd-tool-drawer-title"><i class="fa-solid fa-screwdriver-wrench"></i><span>Choose Tool</span></div>
+      <input type="search" class="rd-tool-search" placeholder="Search tools…" aria-label="Search tools">
+      <button type="button" class="rd-tool-drawer-close" data-action="close-tool-picker" title="Close tool picker" aria-label="Close tool picker"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="rd-tool-categories"></div>
+    <p class="rd-tool-no-results" hidden>No matching tools found.</p>
+  </section>
+
+  <div class="rd-main">
+    <aside class="rd-side-rail">
+      <button type="button" data-action="roster-tab" data-roster-tab="players" class="rd-tab {{#if playerTabActive}}is-active{{/if}}">
+        <i class="fa-solid fa-users"></i><span>Players</span><b>{{playerCount}}</b>
+      </button>
+      <button type="button" data-action="roster-tab" data-roster-tab="npcs" class="rd-tab {{#if npcTabActive}}is-active{{/if}}">
+        <i class="fa-solid fa-dragon"></i><span>NPCs</span><b>{{npcCount}}</b>
+      </button>
+      <div class="rd-selection-count"><strong>{{selectedCount}}</strong><span>selected</span></div>
+    </aside>
+
+    <section class="rd-roster-area">
+      <div class="rd-roster-heading">
+        <div><h3>{{activeTabLabel}}</h3><p>{{#if playerTabActive}}Members of the D&D 5e Primary Party{{else}}NPCs represented by tokens on the current scene{{/if}}</p></div>
+        <span class="rd-hint"><i class="fa-regular fa-hand-pointer"></i> Click to select · Double-click to open</span>
+      </div>
+      <div class="rd-roster-scroll">
+        {{#if playerTabActive}}
+          <div class="rd-actor-grid">
+            {{#each players as |actor|}}
+              <article class="rd-actor-card {{#if actor.selected}}is-selected{{/if}}" data-actor-uuid="{{actor.uuid}}" title="{{actor.name}}">
+                <div class="rd-actor-portrait-wrap"><img class="rd-actor-portrait" src="{{actor.img}}" alt="{{actor.name}}">{{#if actor.selected}}<span class="rd-check-mark"><i class="fa-solid fa-check"></i></span>{{/if}}</div>
+                <span class="rd-actor-name">{{actor.name}}</span>
+                <select class="rd-actor-mode" data-actor-mode="{{actor.uuid}}" aria-label="Visibility for {{actor.name}}" title="{{#if actor.modeLocked}}NPC rolls are always Self · roller + GM; only the GM executes NPC rolls{{else}}Roll visibility{{/if}}" {{#if actor.modeLocked}}disabled{{/if}}>
+                  {{#each actor.modes as |mode|}}<option value="{{mode.value}}" {{#if mode.selected}}selected{{/if}}>{{mode.label}}</option>{{/each}}
+                </select>
+                <select class="rd-actor-mode rd-actor-advantage" data-actor-advantage="{{actor.uuid}}" aria-label="Advantage mode for {{actor.name}}" title="Advantage / disadvantage">
+                  {{#each actor.advantageModes as |mode|}}<option value="{{mode.value}}" {{#if mode.selected}}selected{{/if}}>{{mode.label}}</option>{{/each}}
+                </select>
+              </article>
+            {{else}}
+              <div class="rd-empty-state"><i class="fa-solid fa-users-slash"></i><strong>No party members found</strong><span>Set a Primary Party in the D&D 5e system settings and add character actors to it.</span></div>
+            {{/each}}
+          </div>
+        {{else}}
+          <div class="rd-actor-grid">
+            {{#each npcs as |actor|}}
+              <article class="rd-actor-card {{#if actor.selected}}is-selected{{/if}}" data-actor-uuid="{{actor.uuid}}" title="{{actor.name}}">
+                <div class="rd-actor-portrait-wrap"><img class="rd-actor-portrait" src="{{actor.img}}" alt="{{actor.name}}">{{#if actor.selected}}<span class="rd-check-mark"><i class="fa-solid fa-check"></i></span>{{/if}}</div>
+                <span class="rd-actor-name">{{actor.name}}</span>
+                <select class="rd-actor-mode" data-actor-mode="{{actor.uuid}}" aria-label="Visibility for {{actor.name}}" title="{{#if actor.modeLocked}}NPC rolls are always Self · roller + GM; only the GM executes NPC rolls{{else}}Roll visibility{{/if}}" {{#if actor.modeLocked}}disabled{{/if}}>
+                  {{#each actor.modes as |mode|}}<option value="{{mode.value}}" {{#if mode.selected}}selected{{/if}}>{{mode.label}}</option>{{/each}}
+                </select>
+                <select class="rd-actor-mode rd-actor-advantage" data-actor-advantage="{{actor.uuid}}" aria-label="Advantage mode for {{actor.name}}" title="Advantage / disadvantage">
+                  {{#each actor.advantageModes as |mode|}}<option value="{{mode.value}}" {{#if mode.selected}}selected{{/if}}>{{mode.label}}</option>{{/each}}
+                </select>
+              </article>
+            {{else}}
+              <div class="rd-empty-state"><i class="fa-solid fa-ghost"></i><strong>No NPC tokens on this scene</strong><span>Place NPC tokens on the canvas or use Refresh to update the roster.</span></div>
+            {{/each}}
+          </div>
+        {{/if}}
+      </div>
+    </section>
+  </div>
+
+  <section class="rd-config-panel">
+    <div class="rd-config-title"><i class="fa-solid fa-sliders"></i><span>ROLL SETUP</span><small>Settings apply to this request</small></div>
+    <div class="rd-config-grid">
+      <label class="rd-field"><span>Roll type</span><select name="rollType">{{#each rollTypeOptions as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select></label>
+      <label class="rd-field"><span>{{#if toolRollSelected}}Tool{{else}}Ability / skill / tool{{/if}}</span>
+        {{#if toolRollSelected}}
+          <button type="button" class="rd-tool-picker-trigger" data-action="choose-tool"><span>{{selectedSubtypeLabel}}</span><i class="fa-solid fa-list"></i></button>
+        {{else}}
+          <select name="subtype">{{#each subtypeOptions as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select>
+        {{/if}}
+      </label>
+      <label class="rd-field rd-dc-field"><span>Difficulty class</span><div class="rd-dc-inputs"><select name="dcPreset">{{#each dcOptions as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select><input type="number" name="dc" min="1" max="40" value="{{dc}}" aria-label="Custom DC"></div></label>
+      <label class="rd-field"><span>Default visibility</span><select name="rollMode">{{#each rollModeOptions as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select></label>
+      <label class="rd-field"><span>Group roll</span><select name="groupMethod">{{#each groupMethodOptions as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select></label>
+      <div class="rd-field rd-adv-field"><span>Advantage state</span><div class="rd-segmented">
+        <button type="button" data-action="advantage-mode" data-mode="disadvantage" class="rd-segment rd-dis {{#if defaultDisadvantageSelected}}is-active{{/if}}"><i class="fa-solid fa-arrow-down"></i> Dis</button>
+        <button type="button" data-action="advantage-mode" data-mode="normal" class="rd-segment {{#if defaultNormalSelected}}is-active{{/if}}"><i class="fa-solid fa-dice-d20"></i> Normal</button>
+        <button type="button" data-action="advantage-mode" data-mode="advantage" class="rd-segment rd-adv {{#if defaultAdvantageSelected}}is-active{{/if}}"><i class="fa-solid fa-arrow-up"></i> Adv</button>
+      </div></div>
+    </div>
+  </section>
+
+  <footer class="rd-footer">
+    <div class="rd-footer-note"><i class="fa-solid fa-circle-info"></i><span>Per-actor visibility can override the default. NPC rolls are always Self · roller + GM; only the GM executes NPC rolls.</span></div>
+    <div class="rd-footer-actions">
+      <button type="button" class="rd-icon-button rd-add-all-button" data-action="select-all-players" title="Add all Players" aria-label="Add all Players" data-tooltip="Add all Players"><i class="fa-solid fa-users"></i></button>
+      <button type="button" class="rd-icon-button rd-add-all-button" data-action="select-all-npcs" title="Add all NPCs" aria-label="Add all NPCs" data-tooltip="Add all NPCs"><i class="fa-solid fa-dragon"></i></button>
+      <button type="button" class="rd-button rd-button-primary" data-action="request-all"><i class="fa-solid fa-paper-plane"></i><span>Roll for selected</span><b>{{selectedCount}}</b></button>
+    </div>
+  </footer>
+</div>

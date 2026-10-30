@@ -1,0 +1,55 @@
+<div class="rd-diagnostics-shell">
+  <header class="rd-diagnostics-intro">
+    <div class="rd-brand-mark"><i class="fa-solid fa-stethoscope"></i></div>
+    <div>
+      <h2>Roll Director Diagnostics</h2>
+      <p>Versions, integration availability, and active recovery state. Generated {{generatedAt}}.</p>
+    </div>
+  </header>
+
+  <section class="rd-diagnostics-section">
+    <h3><i class="fa-solid fa-plug"></i> System & integrations</h3>
+    <div class="rd-diagnostics-grid">
+      {{#each rows as |row|}}
+        <div class="rd-diagnostic-row">
+          <span>{{row.label}}</span>
+          <strong class="is-{{row.state}}">{{row.value}}</strong>
+        </div>
+      {{/each}}
+    </div>
+  </section>
+
+  <section class="rd-diagnostics-section">
+    <h3><i class="fa-solid fa-heart-pulse"></i> Runtime state</h3>
+    <div class="rd-diagnostics-grid">
+      {{#each runtimeRows as |row|}}
+        <div class="rd-diagnostic-row"><span>{{row.label}}</span><strong>{{row.value}}</strong></div>
+      {{/each}}
+    </div>
+  </section>
+
+  <section class="rd-diagnostics-section">
+    <h3><i class="fa-solid fa-dice-d20"></i> Active requests</h3>
+    {{#if requestRows.length}}
+      <div class="rd-diagnostic-requests">
+        {{#each requestRows as |request|}}
+          <article class="rd-diagnostic-request">
+            <strong>{{request.type}}</strong>
+            <div><span>{{request.workflow}}</span><span>{{request.age}}</span></div>
+            <small>{{request.completed}} of {{request.actors}} resolved · {{request.waiting}} waiting</small>
+          </article>
+        {{/each}}
+      </div>
+    {{else}}
+      <p class="rd-diagnostics-empty">No active Roll Director request on this client.</p>
+    {{/if}}
+  </section>
+
+  <footer class="rd-diagnostics-footer">
+    <p>The copied report includes version numbers and runtime counters only. It does not include actor names, token names, or player IDs.</p>
+    <div>
+      <button type="button" class="rd-button rd-button-secondary" data-action="refresh-diagnostics"><i class="fa-solid fa-rotate"></i><span>Refresh</span></button>
+      <button type="button" class="rd-button rd-button-primary" data-action="copy-diagnostics"><i class="fa-solid fa-copy"></i><span>Copy report</span></button>
+    </div>
+  </footer>
+</div>
