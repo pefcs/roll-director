@@ -1,3 +1,10 @@
+## 0.2.25
+
+- Added optional integration with Stealth Observer's Perception-lighting API. Automatic Perception requests now preselect Disadvantage when the rolling actor's token is in poor lighting without a suitable vision mode.
+- Roll Director now reapplies the lighting-based Perception penalty after its own mode-selection step. The selected Advantage mode and lighting Disadvantage cancel to a straight roll; Normal or Disadvantage selections remain Disadvantage.
+- Result summaries now report the effective advantage mode stored on the completed D20Roll, rather than blindly repeating the prompt selection. This keeps the displayed mode aligned with the dice actually rolled.
+- The integration is optional and does not change behavior when Stealth Observer is absent, inactive, or its lighting penalty setting is disabled.
+
 # Changelog
 
 ## 0.2.24 — Initiative dice recovery and whisper header cleanup
