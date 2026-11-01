@@ -637,7 +637,10 @@ function rollResultPayload(rolls, actor, request, mode, userId) {
     total: Number(roll.total),
     natural,
     modifier: Number.isFinite(calculatedModifier) ? calculatedModifier : (natural == null ? 0 : Number(roll.total) - natural),
-    mode,
+    // Report the effective mode stored on the completed D20Roll. This can differ
+    // from the UI selection when environmental modifiers (such as poor lighting)
+    // cancel or add advantage/disadvantage.
+    mode: modeFromCompletedRoll(roll, mode),
     formula: String(roll.formula ?? "1d20"),
     rollDetail: serializeRollDetail(roll, request, actor),
     rollerUserId: userId,
@@ -723,11 +726,31 @@ function applyRequestedRollMode(rolls, config) {
     tool: ["tool"]
   })[request.rollType] ?? [];
   if (expectedHooks.length && !expectedHooks.some(name => hooks.includes(name))) return;
-  const advantageMode = request.mode === "advantage" ? 1 : request.mode === "disadvantage" ? -1 : 0;
+  const requestedMode = ["advantage", "disadvantage", "normal"].includes(request.mode)
+    ? request.mode : "normal";
+  const lightingAdjustment = getStealthObserverPerceptionAdjustment(actor, request.rollType, config?.skill);
+  // The lighting penalty is a separate source of disadvantage. Combine it with
+  // the mode selected in Roll Director using normal D&D 5e cancellation:
+  // selected Advantage + lighting Disadvantage = Normal; otherwise Disadvantage.
+  const finalMode = lightingAdjustment.disadvantage
+    ? (requestedMode === "advantage" ? "normal" : "disadvantage")
+    : requestedMode;
+  const advantageMode = finalMode === "advantage" ? 1 : finalMode === "disadvantage" ? -1 : 0;
+  if (lightingAdjustment.disadvantage) {
+    console.info(`${MODULE_ID} | Applied Stealth Observer lighting disadvantage to Roll Director Perception check.`, {
+      actor: actor.name,
+      skill: config?.skill,
+      exposure: lightingAdjustment.exposure,
+      exposureSource: lightingAdjustment.exposureSource,
+      requestedMode,
+      finalMode
+    });
+  }
   for (const roll of rolls ?? []) {
     if (!roll?.d20 || typeof roll.configureModifiers !== "function") continue;
-    // The prompt choice is the final displayed mode. Reconfigure the native D20Roll
-    // after D&D 5e/Midi-QoL have prepared it, so the selected mode changes actual dice.
+    // The selected mode and the environmental lighting modifier have both been
+    // resolved. Reconfigure the native D20Roll so the final dice and result label
+    // reflect the effective mode, not only the prompt selection.
     roll.options.configured = false;
     roll.options.advantage = advantageMode === 1;
     roll.options.disadvantage = advantageMode === -1;
@@ -3768,6 +3791,38 @@ function inferAutomaticRollType(config, fallback = null) {
   return fallback;
 }
 
+/**
+ * Ask Stealth Observer whether this actor's current token lighting imposes
+ * disadvantage on the configured Perception skill. This is optional integration:
+ * Roll Director continues normally when Stealth Observer is absent or inactive.
+ */
+function getStealthObserverPerceptionAdjustment(actor, rollType, subtype) {
+  if (rollType !== "skill" || !actor || !subtype) return { applies: false, disadvantage: false };
+  const module = game.modules?.get?.("stealth-observer");
+  const resolver = module?.active ? module.api?.getPerceptionRollAdjustment : null;
+  if (typeof resolver !== "function") return { applies: false, disadvantage: false };
+  try {
+    const result = resolver(actor, subtype);
+    return {
+      applies: result?.applies === true,
+      disadvantage: result?.applies === true && result?.disadvantage === true,
+      exposure: result?.exposure ?? "unknown",
+      exposureSource: result?.exposureSource ?? null,
+      tokenUuid: result?.tokenUuid ?? null
+    };
+  } catch (error) {
+    console.warn(`${MODULE_ID} | Stealth Observer Perception integration failed; using the selected roll mode.`, error);
+    return { applies: false, disadvantage: false };
+  }
+}
+
+function applyStealthObserverLightingToMode(mode, actor, rollType, subtype) {
+  const adjustment = getStealthObserverPerceptionAdjustment(actor, rollType, subtype);
+  if (!adjustment.disadvantage) return mode;
+  if (mode === "advantage") return "normal";
+  return "disadvantage";
+}
+
 function initialModeFromRollConfig(config, roll = null) {
   const options = config?.rolls?.[0]?.options ?? roll?.options ?? {};
   if (Number.isFinite(options.advantageMode)) {
@@ -3807,7 +3862,9 @@ function makeAutomaticRollPayload(actor, rollType, config = {}, roll = null) {
       : config?.ability ?? "";
   let dc = targetFromRollConfig(config, roll);
   if (dc === null && ["death", "concentration"].includes(rollType)) dc = 10;
-  const mode = initialModeFromRollConfig(config, roll);
+  const mode = applyStealthObserverLightingToMode(
+    initialModeFromRollConfig(config, roll), actor, rollType, subtype
+  );
   const subtypeDisplay = subtypeLabelForRequest(rollType, subtype);
   return {
     triggerActorUuid: actor.uuid,
