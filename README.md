@@ -1,3 +1,7 @@
+## Stealth Observer integration (0.2.25)
+
+When Stealth Observer is active, Roll Director queries its public Perception-lighting API for Perception skill checks. If the actor's local exposure and vision modes require disadvantage, Roll Director includes it in the initial roll-mode selection and reapplies it after the Roll Director prompt. An explicitly selected Advantage and the lighting Disadvantage cancel normally; Normal or Disadvantage resolves to Disadvantage. The result summary reads the actual completed D20Roll mode.
+
 # Roll Director
 
 ## Initiative handling (0.2.21)
