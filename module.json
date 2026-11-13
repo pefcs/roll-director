@@ -2,7 +2,7 @@
   "id": "roll-director",
   "title": "Roll Director",
   "description": "GM-led roll requests with Midi-QoL-owned target workflows, player/NPC initiative handling and automation, privacy-aware summaries, request recovery, and group roll evaluation.",
-  "version": "0.2.25",
+  "version": "0.2.26",
   "authors": [
     {
       "name": "Roll Director contributors"

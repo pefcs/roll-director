@@ -7,6 +7,11 @@
 
 # Changelog
 
+## 0.2.26 — Optional NPC initiative dice suppression
+
+- Added a world setting to suppress Dice So Nice animations for initiative rolls made by NPCs without player controllers. Dice So Nice's global initiative setting remains authoritative, and rolls, combat values, summaries, and Midi-QoL workflows are unchanged.
+- The GM prompt's **Roll all remaining** action now starts initiative rolls concurrently, including player-owned actors. Other roll types and Midi-QoL workflow requests retain their existing sequential handling.
+
 ## 0.2.24 — Initiative dice recovery and whisper header cleanup
 
 - Rehydrate Foundry 14's serialized `ChatMessage.rolls` JSON with the native Roll API before attempting to capture initiative details. This restores the evaluated d20 faces and term breakdown instead of silently falling back to the stored Combatant score whenever `rolls` is serialized as strings.

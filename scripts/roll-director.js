@@ -142,6 +142,37 @@ function isPrivateNPC(actor) {
   return isNPC(actor) && !isPlayerControlledActor(actor);
 }
 
+function actorForChatMessage(message) {
+  const speaker = message?.speaker ?? {};
+  if (speaker.token && speaker.scene) {
+    const tokenActor = fromUuidSync(`Scene.${speaker.scene}.Token.${speaker.token}`)?.actor;
+    if (tokenActor) return tokenActor;
+  }
+  if (speaker.actor) {
+    const actor = game.actors?.get(speaker.actor);
+    if (actor) return actor;
+  }
+  for (const roll of message?.rolls ?? []) {
+    const actorId = roll?.data?.actorId ?? roll?.options?.actor?.id;
+    const actor = actorId ? game.actors?.get(actorId) : null;
+    if (actor) return actor;
+  }
+  return null;
+}
+
+function shouldSuppressInitiativeDice(marker, actor = null) {
+  if (marker?.rollType !== "initiative") return false;
+
+  // Honor Dice So Nice's global initiative switch for Roll Director's explicit API calls,
+  // which do not pass through Dice So Nice's normal chat-message animation decision.
+  if (game.modules?.get("dice-so-nice")?.active
+      && game.settings.get("dice-so-nice", "disabledForInitiative")) return true;
+
+  if (!game.settings.get(MODULE_ID, "suppressNPCInitiativeDice")) return false;
+  actor ??= marker?.actorUuid ? fromUuidSync(marker.actorUuid) : null;
+  return isPrivateNPC(actor);
+}
+
 function getPlayerUsers() {
   return game.users?.filter(user => !user.isGM) ?? [];
 }
@@ -1190,6 +1221,7 @@ function installDiceSoNicePrivacyWrapper() {
     wrappedAnyMethod = true;
     dice3d.showForRoll = function (roll, user, synchronize, whisper, blind, chatMessageId, speaker, options) {
       const marker = markerForDiceRoll(roll, speaker);
+      if (shouldSuppressInitiativeDice(marker)) return Promise.resolve();
       if (!marker?.actorUuid) return original(roll, user, synchronize, whisper, blind, chatMessageId, speaker, options);
       roll.options ??= {};
       roll.options.rollDirector ??= marker;
@@ -1208,6 +1240,7 @@ function installDiceSoNicePrivacyWrapper() {
     wrappedAnyMethod = true;
     dice3d.animateRoll = function (roll, messageData = {}, options = {}) {
       const marker = markerForDiceRoll(roll, messageData?.speaker);
+      if (shouldSuppressInitiativeDice(marker)) return Promise.resolve();
       if (!marker?.actorUuid) return original(roll, messageData, options);
       roll.options ??= {};
       roll.options.rollDirector ??= marker;
@@ -1229,6 +1262,7 @@ function installDiceSoNicePrivacyWrapper() {
 }
 
 async function ensureDiceAnimation(rolls, actor, marker) {
+  if (shouldSuppressInitiativeDice(marker, actor)) return;
   const dice3d = game.dice3d;
   if (!dice3d || typeof dice3d.showForRoll !== "function") return;
   const key = diceAudienceKey(marker);
@@ -1356,6 +1390,14 @@ function registerSettings() {
   game.settings.register(MODULE_ID, "autoRollNPCInitiative", {
     name: "Automatically roll initiative for non-player-controlled actors",
     hint: "When initiative is started from the Combat Tracker, roll initiative automatically for NPCs that are not player-controlled. Disable this to leave those NPCs in the GM Roll Director prompt for manual rolls.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+  game.settings.register(MODULE_ID, "suppressNPCInitiativeDice", {
+    name: "Suppress Dice So Nice for unowned NPC initiative rolls",
+    hint: "When Dice So Nice is not set to disable all initiative animations, hide its 3D dice animation for initiative rolls made by NPCs without a player controller. The initiative roll and result summary are unchanged.",
     scope: "world",
     config: true,
     type: Boolean,
@@ -3405,13 +3447,30 @@ class RollDirectorPrompt extends foundry.applications.api.HandlebarsApplicationM
   }
 
   async rollMany(predicate) {
-    const request = this.request;
-    const actors = this.isGMView
-      ? (request?.actors ?? []).filter(actor => !request.completed.has(actor.uuid) && predicate(actor))
-      : (this.playerData?.actors ?? []).filter(actor => !this.pending.has(actor.itemId) && predicate(actor));
-    for (const actor of actors) {
-      const mode = this.actorModes.get(this.isGMView ? actor.uuid : actor.itemId) ?? actor.defaultMode ?? "normal";
-      await this.rollActor(this.isGMView ? actor.uuid : actor.itemId, mode);
+    if (this._rollingMany) return;
+    this._rollingMany = true;
+    try {
+      const request = this.request;
+      const actors = this.isGMView
+        ? (request?.actors ?? []).filter(actor => !request.completed.has(actor.uuid) && predicate(actor))
+        : (this.playerData?.actors ?? []).filter(actor => !this.pending.has(actor.itemId) && predicate(actor));
+      const rollType = request?.rollType ?? this.playerData?.rollType;
+      const isMidiWorkflow = request?.isMidiWorkflow ?? this.playerData?.midiWorkflow;
+      const rollActor = actor => {
+        const mode = this.actorModes.get(this.isGMView ? actor.uuid : actor.itemId) ?? actor.defaultMode ?? "normal";
+        return this.rollActor(this.isGMView ? actor.uuid : actor.itemId, mode);
+      };
+
+      // Start initiative rolls together so player dice animate as a group. Keep other
+      // roll types and Midi-owned workflows ordered.
+      if (rollType === "initiative" && !isMidiWorkflow) {
+        await Promise.allSettled(actors.map(rollActor));
+        return;
+      }
+
+      for (const actor of actors) await rollActor(actor);
+    } finally {
+      this._rollingMany = false;
     }
   }
 
@@ -3569,6 +3628,7 @@ class RollDirectorPrompt extends foundry.applications.api.HandlebarsApplicationM
         requestId: this.requestId,
         actorUuid: actor.uuid,
         actorId: actor.id,
+        rollType,
         isNPC: isNPC(actor),
         privateNPC,
         isPC: actorRequestData.isPC ?? isCharacter(actor),
@@ -4105,6 +4165,7 @@ async function completeAutomaticNativeRoll(actor, rollType, payload, decision, o
   }
   const marker = {
     requestId, actorUuid: actor.uuid, actorId: actor.id,
+    rollType,
     isNPC: isNPC(actor), privateNPC: override.privateNPC, isPC: override.isPC,
     rollMode: override.rollMode, rollerUserId: game.user.id
   };
@@ -4916,6 +4977,7 @@ function applyInitiativeOverride(actor, roll, override) {
     requestId: override.requestId,
     actorUuid: actor.uuid,
     actorId: actor.id,
+    rollType: "initiative",
     isNPC: isNPC(actor),
     privateNPC: override.privateNPC ?? isNPC(actor),
     isPC: override.isPC ?? isCharacter(actor),
@@ -4984,6 +5046,14 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("diceSoNiceReady", installDiceSoNicePrivacyWrapper);
+Hooks.on("diceSoNiceMessagePreProcess", (messageId, decision) => {
+  if (!decision?.willTrigger3DRoll || !game.settings.get(MODULE_ID, "suppressNPCInitiativeDice")) return;
+  // Dice So Nice applies its own Disabled for Initiative rolls setting after this hook.
+  if (game.settings.get("dice-so-nice", "disabledForInitiative")) return;
+  const message = game.messages?.get(messageId);
+  if (!message?.getFlag("core", "initiativeRoll")) return;
+  if (isPrivateNPC(actorForChatMessage(message))) decision.willTrigger3DRoll = false;
+});
 
 Hooks.once("ready", async () => {
   installDiceSoNicePrivacyWrapper();
